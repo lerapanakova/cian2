@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { reachMortgageGoal, type MortgageStep } from '@/analytics/metrika';
 import { Button, Checkbox, Icon, Input, Radio, Select } from '@/ui';
 import s from './MortgagePage.module.css';
 
@@ -115,13 +116,19 @@ function ChoiceGroup({
 
 export function MortgagePage() {
   const [screen, setScreen] = useState<'entry' | 'form' | 'success'>('entry');
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState<FormData>(profile);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const dates = useMemo(getCallDates, []);
   const canShowConsultant =
     form.mortgageProgram === 'family' || form.mortgageProgram === 'new-build';
   const income = form.incomeCustom.trim() || form.incomePreset;
+
+  useEffect(() => {
+    const currentStep: MortgageStep =
+      screen === 'entry' ? 0 : screen === 'success' ? 'success' : (step as MortgageStep);
+    reachMortgageGoal('mortgage_screen_view', { step: currentStep });
+  }, [screen, step]);
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -168,19 +175,39 @@ export function MortgagePage() {
   };
 
   const continueForm = () => {
-    if (!validateStep()) return;
+    if (!validateStep()) {
+      reachMortgageGoal('mortgage_validation_error', { step });
+      return;
+    }
     if (step === 3) {
+      reachMortgageGoal('mortgage_application_sent', { step: 3, to: 'success' });
       setScreen('success');
       return;
     }
-    setStep((current) => current + 1);
+    reachMortgageGoal('mortgage_step_completed', { step, to: (step + 1) as MortgageStep });
+    setStep((current) => (current + 1) as 1 | 2 | 3);
   };
 
   const startOver = () => {
+    reachMortgageGoal('mortgage_restart', { step: 'success', from: 'success', to: 0 });
     setForm(profile);
     setErrors({});
     setStep(1);
     setScreen('entry');
+  };
+
+  const returnToPreviousStep = () => {
+    if (step === 1) {
+      reachMortgageGoal('mortgage_back', { step: 1, from: 1, to: 0 });
+      setScreen('entry');
+      return;
+    }
+    reachMortgageGoal('mortgage_back', {
+      step,
+      from: step as MortgageStep,
+      to: (step - 1) as MortgageStep,
+    });
+    setStep((current) => (current - 1) as 1 | 2 | 3);
   };
 
   if (screen === 'entry') {
@@ -200,9 +227,13 @@ export function MortgagePage() {
           <div className={s.entryVisual}>
             <img src="/images/mortgage-cover.png" alt="Яркая абстрактная иллюстрация для ипотеки" />
             <div className={s.coverIcons} aria-hidden="true">
-              <span><Icon name="Home" size={34} /></span>
+              <span>
+                <Icon name="Home" size={34} />
+              </span>
               <span className={s.rubleIcon}>₽</span>
-              <span><Icon name="ShieldCheck" size={30} /></span>
+              <span>
+                <Icon name="ShieldCheck" size={30} />
+              </span>
             </div>
           </div>
           <p className={s.overline}>ИПОТЕКА НА ЦИАНЕ</p>
@@ -230,7 +261,10 @@ export function MortgagePage() {
             theme="inverted"
             fullWidth
             size="L"
-            onClick={() => setScreen('form')}
+            onClick={() => {
+              reachMortgageGoal('mortgage_start', { step: 1, from: 0, to: 1 });
+              setScreen('form');
+            }}
           >
             Подобрать ипотеку
           </Button>
@@ -259,12 +293,14 @@ export function MortgagePage() {
           <p className={s.overline}>ЗАЯВКА ОТПРАВЛЕНА</p>
           <h1>Спасибо, {firstName}!</h1>
           <p className={s.lead}>
-            Ипотечный эксперт нашего партнёра позвонит вам {selectedDate?.toLowerCase()} в
-            интервале {form.time}.
+            Ипотечный эксперт нашего партнёра позвонит вам {selectedDate?.toLowerCase()} в интервале{' '}
+            {form.time}.
           </p>
           <div className={s.infoBox}>
             <Icon name="FunctionalInformationCircle16" size={20} />
-            <p>Эксперт уточнит детали и поможет подготовить заявку в банк. Никуда ходить не нужно.</p>
+            <p>
+              Эксперт уточнит детали и поможет подготовить заявку в банк. Никуда ходить не нужно.
+            </p>
           </div>
           <Button className={s.primaryButton} fullWidth size="L" onClick={startOver}>
             Понятно
@@ -277,11 +313,7 @@ export function MortgagePage() {
   return (
     <main className={s.app}>
       <header className={s.topbar}>
-        <button
-          className={s.back}
-          type="button"
-          onClick={() => (step === 1 ? setScreen('entry') : setStep((current) => current - 1))}
-        >
+        <button className={s.back} type="button" onClick={returnToPreviousStep}>
           <Icon name="ActionChevronLeft16" size={20} />
           Назад
         </button>
