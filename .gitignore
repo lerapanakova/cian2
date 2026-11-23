@@ -7,3 +7,6 @@ coverage/
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# Rendered media is uploaded separately; keep the reproducible source assets in Git.
+public/promo/*.mp4
