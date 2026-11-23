@@ -31,6 +31,10 @@ const extraIcons: Record<string, string> = {
   Message:
     '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8v.5Z"/>',
   Bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  Home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Zm6 11v-7h6v7"/>',
+  ShieldCheck:
+    '<path d="M12 3 5 6v5c0 4.6 2.9 8.7 7 10 4.1-1.3 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-4"/>',
+  Timer: '<circle cx="12" cy="13" r="8"/><path d="M9 3h6M12 13l3-2M12 5V3"/>',
 };
 export type IconName = (typeof icons)[number]['name'] | keyof typeof extraIcons;
 export function Icon({
